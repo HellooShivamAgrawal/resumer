@@ -17,6 +17,7 @@
         <span class="save-state" id="saveState"><span class="save-dot"></span> Saved in this browser</span>
         <button class="button quiet" id="documentsButton" type="button">Templates</button>
         <button class="button quiet" id="structureTopButton" type="button">Manage sections</button>
+        <button class="button quiet" id="bwButton" type="button"><span class="button-icon">↓</span> B&amp;W PDF</button>
         <button class="button primary" id="printButton" type="button"><span class="button-icon">↓</span> Download PDF</button>
       </div>
     </header>
@@ -102,6 +103,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <input id="importResumeInput" type="file" accept="application/json,.json,text/html,.html" hidden />
     <script src="vendor/html2canvas.min.js?v=1.4.1"></script>
-    <script src="app.js?v=pdf-images-v5"></script>
+    <script src="vendor/bw-export.js?v=1"></script>
+    <script src="app.js?v=pdf-bw-v6"></script>
   </body>
 </html>
