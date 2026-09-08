@@ -1,2 +1,10 @@
 tmp/
 .DS_Store
+node_modules/
+.env
+.env.*
+dist/
+build/
+coverage/
+.idea/
+.vscode/
