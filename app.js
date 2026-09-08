@@ -993,7 +993,7 @@ async function printPdf() {
   button.textContent = 'Creating PDF…';
   showToast('Creating exact A4 PDF…');
   try {
-    if (!window.html2canvas || !window.jspdf?.jsPDF) throw new Error('PDF renderer did not load');
+    if (!window.html2canvas) throw new Error('PDF renderer did not load');
     clearAssetSelection();
     await Promise.all(Array.from(page.querySelectorAll('img')).map(async (image) => {
       if (!image.complete || !image.naturalWidth) await image.decode();
@@ -1016,10 +1016,14 @@ async function printPdf() {
         clonedPage.querySelectorAll('.selected-asset').forEach((element) => element.classList.remove('selected-asset'));
       }
     });
-    const pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-    pdf.addImage(canvas.toDataURL('image/jpeg', .98), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
     const resume = activeResume();
-    pdf.save(`${(resume?.name || 'resume').replace(/[^a-z0-9]+/gi, '-')}.pdf`);
+    const pdfBlob = pdfBlobFromCanvas(canvas);
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const anchor = document.createElement('a');
+    anchor.href = pdfUrl;
+    anchor.download = `${(resume?.name || 'resume').replace(/[^a-z0-9]+/gi, '-')}.pdf`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
     showToast('A4 PDF downloaded');
   } catch (error) {
     showToast(`PDF download failed: ${error.message}`);
@@ -1027,6 +1031,29 @@ async function printPdf() {
     button.disabled = false;
     button.innerHTML = originalLabel;
   }
+}
+
+function pdfBlobFromCanvas(canvas) {
+  const jpeg = atob(canvas.toDataURL('image/jpeg', .98).split(',')[1]);
+  const imageBytes = new Uint8Array(jpeg.length);
+  for (let index = 0; index < jpeg.length; index += 1) imageBytes[index] = jpeg.charCodeAt(index);
+  const encode = (value) => new TextEncoder().encode(value);
+  const header = new Uint8Array([37, 80, 68, 70, 45, 49, 46, 52, 10, 37, 255, 255, 255, 255, 10]);
+  const objects = [
+    encode('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'),
+    encode('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n'),
+    encode('3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n'),
+    (() => { const prefix = encode(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${canvas.width} /Height ${canvas.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`); const suffix = encode('\nendstream\nendobj\n'); const result = new Uint8Array(prefix.length + imageBytes.length + suffix.length); result.set(prefix); result.set(imageBytes, prefix.length); result.set(suffix, prefix.length + imageBytes.length); return result; })(),
+    (() => { const content = encode('q\n595.28 0 0 841.89 0 0 cm\n/Im0 Do\nQ\n'); const prefix = encode(`5 0 obj\n<< /Length ${content.length} >>\nstream\n`); const suffix = encode('endstream\nendobj\n'); const result = new Uint8Array(prefix.length + content.length + suffix.length); result.set(prefix); result.set(content, prefix.length); result.set(suffix, prefix.length + content.length); return result; })()
+  ];
+  const parts = [header];
+  const offsets = [0];
+  let position = header.length;
+  objects.forEach((object) => { offsets.push(position); parts.push(object); position += object.length; });
+  const xrefOffset = position;
+  const xref = `xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  parts.push(encode(xref));
+  return new Blob(parts, { type: 'application/pdf' });
 }
 
 async function downloadEditableHtml() {
