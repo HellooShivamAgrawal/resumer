@@ -1,15 +1,17 @@
 (() => {
-  function pdfBlobFromCanvas(canvas) {
+  function pdfBlobFromCanvas(canvas, monochrome) {
     const context = canvas.getContext('2d');
-    const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-    for (let index = 0; index < pixels.data.length; index += 4) {
-      const luminance = (pixels.data[index] * .299) + (pixels.data[index + 1] * .587) + (pixels.data[index + 2] * .114);
-      const value = luminance >= 185 ? 255 : 0;
-      pixels.data[index] = value;
-      pixels.data[index + 1] = value;
-      pixels.data[index + 2] = value;
+    if (monochrome) {
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+      for (let index = 0; index < pixels.data.length; index += 4) {
+        const luminance = (pixels.data[index] * .299) + (pixels.data[index + 1] * .587) + (pixels.data[index + 2] * .114);
+        const value = luminance >= 185 ? 255 : 0;
+        pixels.data[index] = value;
+        pixels.data[index + 1] = value;
+        pixels.data[index + 2] = value;
+      }
+      context.putImageData(pixels, 0, 0);
     }
-    context.putImageData(pixels, 0, 0);
     const binary = atob(canvas.toDataURL('image/jpeg', .98).split(',')[1]);
     const image = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) image[index] = binary.charCodeAt(index);
@@ -32,12 +34,12 @@
     return new Blob(parts, { type: 'application/pdf' });
   }
 
-  async function exportBwPdf(button) {
+  async function exportPdf(button, monochrome) {
     const page = document.getElementById('resumePage');
     if (!page || !window.html2canvas) return;
     const original = button.innerHTML;
     button.disabled = true;
-    button.textContent = 'Creating B&W…';
+    button.textContent = monochrome ? 'Creating B&W…' : 'Creating PDF…';
     try {
       await document.fonts.ready;
       await Promise.all(Array.from(page.querySelectorAll('img')).map(async (image) => { if (!image.complete || !image.naturalWidth) await image.decode(); }));
@@ -48,10 +50,10 @@
         clonedPage.querySelectorAll('.selected-asset').forEach((element) => element.classList.remove('selected-asset'));
       }});
       const name = document.getElementById('activeResumeName')?.textContent.trim() || 'resume';
-      const url = URL.createObjectURL(pdfBlobFromCanvas(canvas));
+      const url = URL.createObjectURL(pdfBlobFromCanvas(canvas, monochrome));
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `${name.replace(/[^a-z0-9]+/gi, '-')}-bw.pdf`;
+      anchor.download = `${name.replace(/[^a-z0-9]+/gi, '-')}${monochrome ? '-bw' : ''}.pdf`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } finally {
@@ -61,15 +63,20 @@
   }
 
   function install() {
-    if (document.getElementById('bwButton')) return;
     const printButton = document.getElementById('printButton');
     if (!printButton) return;
+    printButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      exportPdf(printButton, false);
+    }, true);
+    if (document.getElementById('bwButton')) return;
     const button = document.createElement('button');
     button.className = 'button quiet';
     button.id = 'bwButton';
     button.type = 'button';
     button.innerHTML = '<span class="button-icon">↓</span> B&amp;W PDF';
-    button.addEventListener('click', () => exportBwPdf(button));
+    button.addEventListener('click', () => exportPdf(button, true));
     printButton.before(button);
   }
 
