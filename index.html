@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Simple editable resume workspace with print-ready PDF export." />
+    <title>Paperroom — Resume editor</title>
+    <link rel="stylesheet" href="styles.css?v=render-contract-v3" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">P</span><span>paperroom</span></div>
+      <div class="topbar-center">
+        <span class="crumb">Resumes</span><span class="slash">/</span><strong id="activeResumeName">Shivam Agrawal</strong>
+      </div>
+      <div class="topbar-actions">
+        <span class="save-state" id="saveState"><span class="save-dot"></span> Saved in this browser</span>
+        <button class="button quiet" id="documentsButton" type="button">Templates</button>
+        <button class="button quiet" id="structureTopButton" type="button">Manage sections</button>
+        <button class="button primary" id="printButton" type="button"><span class="button-icon">↓</span> Download PDF</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-header"><div class="sidebar-label">Documents</div><button class="sidebar-close" id="closeSidebarButton" type="button" aria-label="Hide document drawer">×</button></div>
+        <div class="resume-switcher" id="resumeSwitcher" role="tablist" aria-label="Resume versions"></div>
+        <div class="resume-library-actions">
+          <button class="sidebar-action" id="newResumeButton" type="button"><span class="action-symbol">+</span> New resume</button>
+          <button class="sidebar-action" id="duplicateResumeButton" type="button"><span class="action-symbol">⧉</span> Duplicate current</button>
+          <button class="sidebar-action" id="importResumeButton" type="button"><span class="action-symbol">↑</span> Import backup</button>
+          <button class="sidebar-action" id="downloadBackupButton" type="button"><span class="action-symbol">↓</span> Download backup</button>
+          <button class="sidebar-action" id="renameResumeButton" type="button"><span class="action-symbol">✎</span> Rename current</button>
+          <button class="sidebar-action danger" id="deleteResumeButton" type="button"><span class="action-symbol">×</span> Delete current</button>
+        </div>
+
+        <div class="sidebar-rule"></div>
+        <div class="sidebar-label">Content</div>
+        <button class="sidebar-action" id="structureButton" type="button"><span class="action-symbol">☷</span> Manage sections</button>
+        <button class="sidebar-action" id="addSectionButton" type="button"><span class="action-symbol">+</span> Add a section</button>
+        <button class="sidebar-action" id="jsonButton" type="button"><span class="action-symbol">{ }</span> Edit JSON</button>
+        <button class="sidebar-action" id="downloadHtmlButton" type="button"><span class="action-symbol">↓</span> Download editable HTML</button>
+        <button class="sidebar-action" id="resetButton" type="button"><span class="action-symbol">↺</span> Restore original</button>
+
+        <div class="sidebar-tip"><div class="tip-icon">✦</div><div><strong>Edit on the page</strong><p>Click text to change it. Click an icon, tool tile, or QR code to replace its image.</p></div></div>
+        <div class="sidebar-footer">A4 canvas · 210 × 297 mm<br />Backups move resumes between browsers.</div>
+      </aside>
+
+      <section class="workspace" aria-label="Resume editor">
+        <div class="workspace-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label">Canvas</span>
+            <button class="zoom-button" id="zoomOut" type="button" aria-label="Zoom out">−</button>
+            <span class="zoom-value" id="zoomValue">90%</span>
+            <button class="zoom-button" id="zoomIn" type="button" aria-label="Zoom in">+</button>
+            <button class="ruler-button" id="rulerButton" type="button" aria-pressed="false">Ruler</button>
+          </div>
+          <div class="toolbar-group toolbar-note"><span class="status-pill">A4</span><span>Changes save automatically</span></div>
+        </div>
+        <div class="canvas-wrap" id="canvasWrap">
+          <div class="canvas-grid"></div>
+          <article class="resume-page" id="resumePage" aria-label="Editable resume page"></article>
+        </div>
+      </section>
+
+      <aside class="inspector">
+        <div class="inspector-heading"><div><span class="eyebrow">Inspector</span><h2>Edit selection</h2></div><button class="inspector-close" id="closeInspectorButton" type="button" aria-label="Close inspector">×</button></div>
+        <p class="inspector-copy" id="selectionHint">Click a text area to edit in place, or select an icon, tool tile, or QR code to manage its image.</p>
+        <div class="inspector-section" id="assetInspector" hidden>
+          <div class="inspector-section-title" id="assetLabel">Selected asset</div>
+          <input id="assetUpload" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+          <div class="asset-buttons"><button class="button quiet" id="removeAssetButton" type="button">Remove image</button><button class="button quiet" id="restoreAssetButton" type="button">Restore original</button></div>
+        </div>
+      </aside>
+    </main>
+    <div class="modal-backdrop" id="structureModal" hidden>
+      <section class="structure-dialog" role="dialog" aria-modal="true" aria-labelledby="structureTitle">
+        <header class="json-header"><div><span class="eyebrow">Resume structure</span><h2 id="structureTitle">Sections & items</h2></div><button class="modal-close" id="closeStructureButton" type="button" aria-label="Close structure editor">×</button></header>
+        <div class="structure-help">Edit section names and entry fields directly here. Drag section cards between columns or use the arrows; every change is saved locally and auto-fits the A4 page when possible.</div>
+        <div class="structure-columns" id="structureColumns"></div>
+        <footer class="json-footer"><span class="structure-status" id="structureStatus"></span><div><button class="button quiet" id="addStructureSection" type="button">Add section</button><button class="button primary" id="closeStructureDone" type="button">Done</button></div></footer>
+      </section>
+    </div>
+    <div class="modal-backdrop" id="jsonModal" hidden>
+      <section class="json-dialog" role="dialog" aria-modal="true" aria-labelledby="jsonTitle">
+        <header class="json-header"><div><span class="eyebrow">Structured editor</span><h2 id="jsonTitle">Edit resume JSON</h2></div><button class="modal-close" id="closeJsonButton" type="button" aria-label="Close JSON editor">×</button></header>
+        <div class="json-toolbar"><span>Change <code>content</code> values, then apply. The <code>mapping</code> block explains where every value lands.</span><div><button class="button quiet" id="downloadJsonButton" type="button">Download JSON</button><button class="button quiet" id="refreshJsonButton" type="button">Refresh from canvas</button></div></div>
+        <div class="json-editor-grid"><div class="json-input-wrap"><textarea id="jsonTextarea" spellcheck="false" aria-label="Resume JSON"></textarea></div><aside class="mapping-card"><div class="inspector-section-title">How mapping works</div><p>Every editable field gets a stable id. The selector is the visual target; the type tells the editor whether to update text or inline HTML.</p><div class="mapping-example"><code>"header.name"</code><span>→</span><code>[data-bind="header.name"]</code></div><div class="mapping-card-tip">Tip: edit a few fields at a time, then click Apply JSON. Invalid JSON is highlighted before it can change the canvas.</div></aside></div>
+        <footer class="json-footer"><span class="json-error" id="jsonError"></span><div><button class="button quiet" id="cancelJsonButton" type="button">Cancel</button><button class="button primary" id="applyJsonButton" type="button">Apply JSON</button></div></footer>
+      </section>
+    </div>
+    <div class="modal-backdrop" id="resumeModal" hidden>
+      <section class="resume-dialog" role="dialog" aria-modal="true" aria-labelledby="resumeModalTitle">
+        <header class="json-header"><div><span class="eyebrow">Document library</span><h2 id="resumeModalTitle">New resume</h2></div><button class="modal-close" id="closeResumeButton" type="button" aria-label="Close document dialog">×</button></header>
+        <form id="resumeForm" class="resume-form">
+          <label><span>Resume name</span><input id="resumeNameInput" required maxlength="72" autocomplete="off" placeholder="e.g. Product designer resume" /></label>
+          <label id="templateSelectRow"><span>Start from</span><select id="resumeTemplateInput"><option value="shivam">Editorial template</option><option value="harshit">Classic split template</option></select></label>
+        </form>
+        <footer class="json-footer"><span class="resume-error" id="resumeError"></span><div><button class="button quiet" id="cancelResumeButton" type="button">Cancel</button><button class="button primary" id="saveResumeButton" type="submit" form="resumeForm">Create resume</button></div></footer>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <input id="importResumeInput" type="file" accept="application/json,.json,text/html,.html" hidden />
+    <script src="vendor/html2canvas.min.js?v=1.4.1"></script>
+    <script src="vendor/jspdf.umd.min.js?v=3.0.2"></script>
+    <script src="app.js?v=pdf-images-v5"></script>
+  </body>
+</html>
